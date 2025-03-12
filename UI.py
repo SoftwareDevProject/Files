@@ -1,14 +1,14 @@
-import tkinter as tk
+# Import Module
+from tkinter import *
 
-window = tk.Tk()
-window.title("My First UI")
-window.geometry("300x200")  # Set window size
+# create root window
+root = Tk()
 
-label = tk.Label(window, text="Enter your name:")
-label.pack()  # Place the label in the window
+# root window title and dimension
+root.title("Example")
+# Set geometry (widthxheight)
+root.geometry('350x200')
 
-entry = tk.Entry(window)
-entry.pack()
-
-button = tk.Button(window, text="Submit", command=lambda: print("Name:", entry.get()))
-button.pack()
+# all widgets will be here
+# Execute Tkinter
+root.mainloop()
