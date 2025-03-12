@@ -11,6 +11,7 @@ def clicked(email_txt, password_txt):
     email_txt.insert(0, "")
     password_txt.delete(0, END)
     password_txt.insert(0, "")
+    email_txt.focus_set() # sets cursor to first entry
 
 # Function for creating an entry
 def create_entry():
