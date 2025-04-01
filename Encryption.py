@@ -1,4 +1,6 @@
 # Encryption.py
+# Written by: Kenneth Hook, Jacob Lee, Samuel Ofori-Addi, Meera Pillai
+# Purpose: This code is the handles the encryption and decryption for the application.
 
 # Imports
 import base64
