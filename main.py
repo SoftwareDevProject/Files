@@ -1,3 +1,8 @@
+# Main.py
+# Written by: Kenneth Hook, Jacob Lee, Samuel Ofori-Addi, Meera Pillai
+# Purpose: This code is the main file for this project. Upon running, this file will start the application.
+
+# Imports
 from tkinter import *
 from tkinter import simpledialog, messagebox
 import Encryption
@@ -23,6 +28,7 @@ def set_master_password_screen():
     confirm_entry = Entry(root, show="*", font=("Arial", 12), width=25)
     confirm_entry.pack(pady=5)
 
+    # Saving master password
     def save_password():
         pw = pw_entry.get()
         confirm = confirm_entry.get()
