@@ -1,17 +1,23 @@
+# vault_gui.py
+# Written by: Kenneth Hook, Jacob Lee, Samuel Ofori-Addi, Meera Pillai
+# Purpose: This code is the GUI file for the application after entering the project from entering the master password. 
 from tkinter import *
 from tkinter import messagebox, simpledialog
 import Encryption
 
+# Opens application
 def open_vault():
     vault = Tk()
     vault.title("🛡️ Password Vault")
     vault.geometry("700x500")
 
+    # Clears the application
     def clear():
         for widget in vault.winfo_children():
             if not isinstance(widget, Menu):
                 widget.destroy()
 
+    # Refreshes the application
     def refresh():
         clear()
         Label(vault, text="Your Saved Entries", font=("Arial", 14, "bold")).pack(pady=10)
@@ -31,6 +37,7 @@ def open_vault():
 
         Button(vault, text="➕ Add Entry", command=add_entry, font=("Arial", 12)).pack(pady=15)
 
+    # Adds an entry
     def add_entry():
         cat = simpledialog.askstring("Category", "Enter category:")
         email = simpledialog.askstring("Email", "Enter email:")
@@ -42,6 +49,7 @@ def open_vault():
         else:
             messagebox.showwarning("Missing", "All fields are required.")
 
+    # Deletes an entry
     def delete_entry(index):
         confirm = messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this entry?")
         if confirm:
@@ -52,6 +60,7 @@ def open_vault():
                 messagebox.showinfo("Deleted", "Entry deleted.")
                 refresh()
 
+    # Edits an entry
     def edit_entry(index):
         entries = Encryption.load_entries()
         if 0 <= index < len(entries):
