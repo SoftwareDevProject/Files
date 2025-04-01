@@ -1,54 +1,73 @@
-# Importing modules
+# Encryption.py
+
+import base64
+import hashlib
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
+import os
 
-# Entry class that defines what an entry will consist of when its stored
-class Entry:
-    def __init__(self, email, password, key, nonce, tag):
-        self.email = email
-        self.password = password
-        self.key = key
-        self.nonce = nonce
-        self.tag = tag
+VAULT_FILE = "entries.txt"
+CONFIG_FILE = "config.txt"
 
-    # Print function in entry class just to see what things look like
-    def print(self):
-        print("Email: " + self.email + " Password: ")
-        print(self.password)
-        print(self.key)
-        print(self.nonce)
-        print(self.tag)
+# Hash a password (SHA-256)
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
-# Encrypt function
-def encrypt(email, password):
-    # Creation of encryption key
+# Save hashed master password
+def set_master_password(password):
+    with open(CONFIG_FILE, "w") as f:
+        f.write(hash_password(password))
+
+# Check if config exists
+def master_password_exists():
+    return os.path.exists(CONFIG_FILE)
+
+# Verify entered password
+def verify_master_password(input_password):
+    if not master_password_exists():
+        return False
+    with open(CONFIG_FILE, "r") as f:
+        stored_hash = f.read().strip()
+    return hash_password(input_password) == stored_hash
+
+# Encrypt password entry and save to file
+def encrypt_and_store(category, email, password):
     key = get_random_bytes(16)
-
-    # Encryption
     cipher = AES.new(key, AES.MODE_EAX)
     ciphertext, tag = cipher.encrypt_and_digest(password.encode())
     nonce = cipher.nonce
 
-    new_entry = Entry(email, ciphertext, key, nonce, tag)
+    encoded_data = [
+        base64.b64encode(x).decode('utf-8')
+        for x in [ciphertext, key, nonce, tag]
+    ]
 
-    # Need to look into this, password key nonce and tag will not be able to be written to file due to decoding errors
-    #file = open("entries.txt", "w")
-    #file.write(new_entry.email + "," + new_entry.password + "," + new_entry.key + "," + new_entry.nonce + tag)
-    #file.close()
+    with open(VAULT_FILE, "a") as f:
+        f.write(f"{category},{email},{','.join(encoded_data)}\n")
 
-    new_entry.print()
-    return new_entry
+# Load and decrypt all entries
+def load_entries():
+    entries = []
+    if not os.path.exists(VAULT_FILE):
+        return entries
 
-# Decrypt function
-def decrypt(ciphertext, key, nonce, tag):
-    decryptionCipher = AES.new(key, AES.MODE_EAX, nonce)
-    ddata = decryptionCipher.decrypt_and_verify(ciphertext, tag)
-    return ddata
+    with open(VAULT_FILE, "r") as f:
+        for line in f:
+            parts = line.strip().split(",")
+            if len(parts) != 6:
+                continue
+            category, email, *b64 = parts
+            ciphertext, key, nonce, tag = [base64.b64decode(x) for x in b64]
+            try:
+                cipher = AES.new(key, AES.MODE_EAX, nonce)
+                password = cipher.decrypt_and_verify(ciphertext, tag).decode('utf-8')
+                entries.append((category, email, password))
+            except:
+                pass  # decryption failed, skip
+    return entries
 
-# Test case
-def test():
-    new_entry1 = Entry("j", "j", "", "", "")
-    encrypted_entry = encrypt(new_entry1.email, new_entry1.password)
-    print(decrypt(encrypted_entry.password, encrypted_entry.key, encrypted_entry.nonce, encrypted_entry.tag))
-
-test()
+# Overwrite all entries in the file
+def overwrite_entries(entries):
+    with open(VAULT_FILE, "w") as f:
+        for category, email, password in entries:
+            encrypt_and_store(category, email, password)
