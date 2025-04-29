@@ -82,5 +82,28 @@ def open_vault():
             vault.clipboard_clear()
             vault.clipboard_append(password)
             vault.update()
+
+    # Searches entries to match specific category
+    def search_entry():
+        clear()
+        find_entry = simpledialog.askstring("Category", "Enter category name:")
+        entries = Encryption.load_entries()
+        found_entries = []
+        index = 0
+        Label(vault, text="Entries matching search", font=("Arial", 14, "bold")).pack(pady=10)
+        for entry in entries:
+            cat, email, password = entries[index]
+            index+=1
+            if cat == find_entry:
+                frame = Frame(vault)
+                frame.pack(anchor=W, padx=20, pady=2)
+                Label(frame, text=f"[{cat}] {email} — {password}", font=("Arial", 11)).grid(row=0, column=0,sticky=W)
+
+                Button(frame, text="Edit", command=lambda idx=index: edit_entry(idx), bg="lightblue").grid(row=0,column=1,padx=5)
+                Button(frame, text="Delete", command=lambda idx=index: delete_entry(idx), bg="tomato").grid(row=0,column=2,padx=5)
+                Button(frame, text="Copy Password", command=lambda idx=index: copy_entry(idx), bg="purple").grid(row=0,column=3,padx=5)
+
+        Button(vault, text="Reset", command=refresh, font=("Arial", 12)).pack(pady=15)
+
     refresh()
     vault.mainloop()
