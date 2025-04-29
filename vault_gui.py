@@ -34,6 +34,7 @@ def open_vault():
 
                 Button(frame, text="Edit", command=lambda idx=i: edit_entry(idx), bg="lightblue").grid(row=0, column=1, padx=5)
                 Button(frame, text="Delete", command=lambda idx=i: delete_entry(idx), bg="tomato").grid(row=0, column=2, padx=5)
+                Button(frame, text="Copy Password", command=lambda idx=i: copy_entry(idx), bg="purple").grid(row=0, column=3, padx=5)
 
         Button(vault, text="➕ Add Entry", command=add_entry, font=("Arial", 12)).pack(pady=15)
 
@@ -72,6 +73,14 @@ def open_vault():
                 Encryption.overwrite_entries(entries)
                 messagebox.showinfo("Updated", "Entry updated.")
                 refresh()
-
+                
+    # Copys password of an entry
+    def copy_entry(index):
+        entries = Encryption.load_entries()
+        if 0 <= index < len(entries):
+            cat, email, password = entries[index]
+            vault.clipboard_clear()
+            vault.clipboard_append(password)
+            vault.update()
     refresh()
     vault.mainloop()
