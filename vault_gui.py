@@ -5,16 +5,19 @@ from tkinter import *
 from tkinter import messagebox, simpledialog
 import Encryption
 
+# Opens application
 def open_vault():
     vault = Tk()
     vault.title("🛡️ Password Vault")
     vault.geometry("700x500")
-
+    
+    # Clears application
     def clear():
         for widget in vault.winfo_children():
             if not isinstance(widget, Menu):
                 widget.destroy()
 
+    # Refreshes application
     def refresh():
         clear()
         Label(vault, text="Your Saved Entries", font=("Arial", 14, "bold")).pack(pady=10)
@@ -40,6 +43,7 @@ def open_vault():
         Button(button_frame, text="🔍 Search Entry", command=search_entry, font=("Arial", 12)).grid(row=0, column=1, padx=5)
         Button(button_frame, text="🚪 Sign Out", command=sign_out, font=("Arial", 12), bg="gray").grid(row=0, column=2, padx=5)
 
+    # Adds entry
     def add_entry():
         entry_window = Toplevel(vault)
         entry_window.title("Add New Entry")
@@ -57,7 +61,8 @@ def open_vault():
         Label(entry_window, text="Password:", font=("Arial", 11)).pack(pady=5)
         pw_entry = Entry(entry_window, width=30, show="*")
         pw_entry.pack()
-
+        
+        # Saves and closes entry addition window
         def save_and_close():
             cat = cat_entry.get()
             email = email_entry.get()
@@ -72,6 +77,7 @@ def open_vault():
 
         Button(entry_window, text="Save", command=save_and_close).pack(pady=10)
 
+    # Deletes entry
     def delete_entry(index):
         confirm = messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this entry?")
         if confirm:
@@ -82,6 +88,7 @@ def open_vault():
                 messagebox.showinfo("Deleted", "Entry deleted.")
                 refresh()
 
+    # Edits entry
     def edit_entry(index):
         entries = Encryption.load_entries()
         if 0 <= index < len(entries):
@@ -94,6 +101,7 @@ def open_vault():
                 messagebox.showinfo("Updated", "Entry updated.")
                 refresh()
 
+    # Copy's entry
     def copy_entry(index):
         entries = Encryption.load_entries()
         if 0 <= index < len(entries):
@@ -102,6 +110,7 @@ def open_vault():
             vault.clipboard_append(password)
             vault.update()
 
+    # Searches entry
     def search_entry():
         clear()
         find_entry = simpledialog.askstring("Category", "Enter category name:")
@@ -122,6 +131,7 @@ def open_vault():
 
         Button(vault, text="Reset", command=refresh, font=("Arial", 12)).pack(pady=15)
 
+    # Sign out functionality
     def sign_out():
         confirm = messagebox.askyesno("Sign Out", "Are you sure you want to sign out?")
         if confirm:
