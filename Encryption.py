@@ -3,75 +3,85 @@
 # Purpose: This code is the handles the encryption and decryption for the application.
 
 # Imports
-import base64
+
 import hashlib
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
 import os
+import json
 
-# Global Files
-VAULT_FILE = "entries.txt"
-CONFIG_FILE = "config.txt"
+# File paths
+MASTER_FILE = "master.dat"
+ENTRIES_FILE = "entries.txt"
+SECURITY_FILE = "security.dat"
 
-# Hash a password (SHA-256)
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+# Predefined security questions
+SECURITY_QUESTIONS = [
+    "What is your pet's name?",
+    "What is the name of your high school?",
+    "What is your mother's middle name?",
+    "What is your father's middle name?",
+    "What is your favorite color?"
+]
 
-# Save hashed master password
+def get_all_security_questions():
+    return SECURITY_QUESTIONS
+
+# Generate a key based on the master password
+def _generate_key(password):
+    return hashlib.sha256(password.encode()).digest()
+
+# Master password handling
 def set_master_password(password):
-    with open(CONFIG_FILE, "w") as f:
-        f.write(hash_password(password))
+    hashed = hashlib.sha256(password.encode()).hexdigest()
+    with open(MASTER_FILE, 'w') as f:
+        f.write(hashed)
 
-# Check if config exists
-def master_password_exists():
-    return os.path.exists(CONFIG_FILE)
-
-# Verify entered password
-def verify_master_password(input_password):
-    if not master_password_exists():
+def verify_master_password(password):
+    if not os.path.exists(MASTER_FILE):
         return False
-    with open(CONFIG_FILE, "r") as f:
-        stored_hash = f.read().strip()
-    return hash_password(input_password) == stored_hash
+    with open(MASTER_FILE, 'r') as f:
+        stored = f.read()
+    return hashlib.sha256(password.encode()).hexdigest() == stored
 
-# Encrypt password entry and save to file
+def master_password_exists():
+    return os.path.exists(MASTER_FILE)
+
+# Security question handling
+def set_security_question(question, answer):
+    data = {
+        "question": question,
+        "answer_hash": hashlib.sha256(answer.lower().strip().encode()).hexdigest()
+    }
+    with open(SECURITY_FILE, 'w') as f:
+        json.dump(data, f)
+
+def get_security_question():
+    if not os.path.exists(SECURITY_FILE):
+        return None
+    with open(SECURITY_FILE, 'r') as f:
+        data = json.load(f)
+    return data.get("question")
+
+def verify_security_answer(answer):
+    if not os.path.exists(SECURITY_FILE):
+        return False
+    with open(SECURITY_FILE, 'r') as f:
+        data = json.load(f)
+    answer_hash = hashlib.sha256(answer.lower().strip().encode()).hexdigest()
+    return data.get("answer_hash") == answer_hash
+
+# Entry encryption (simple write and read)
 def encrypt_and_store(category, email, password):
-    key = get_random_bytes(16)
-    cipher = AES.new(key, AES.MODE_EAX)
-    ciphertext, tag = cipher.encrypt_and_digest(password.encode())
-    nonce = cipher.nonce
+    with open(ENTRIES_FILE, 'a') as f:
+        f.write(f"{category},{email},{password}\n")
 
-    encoded_data = [
-        base64.b64encode(x).decode('utf-8')
-        for x in [ciphertext, key, nonce, tag]
-    ]
-
-    with open(VAULT_FILE, "a") as f:
-        f.write(f"{category},{email},{','.join(encoded_data)}\n")
-
-# Load and decrypt all entries
 def load_entries():
-    entries = []
-    if not os.path.exists(VAULT_FILE):
-        return entries
+    if not os.path.exists(ENTRIES_FILE):
+        return []
+    with open(ENTRIES_FILE, 'r') as f:
+        lines = f.readlines()
+    return [tuple(line.strip().split(',')) for line in lines]
 
-    with open(VAULT_FILE, "r") as f:
-        for line in f:
-            parts = line.strip().split(",")
-            if len(parts) != 6:
-                continue
-            category, email, *b64 = parts
-            ciphertext, key, nonce, tag = [base64.b64decode(x) for x in b64]
-            try:
-                cipher = AES.new(key, AES.MODE_EAX, nonce)
-                password = cipher.decrypt_and_verify(ciphertext, tag).decode('utf-8')
-                entries.append((category, email, password))
-            except:
-                pass  # decryption failed, skip
-    return entries
-
-# Overwrite all entries in the file
 def overwrite_entries(entries):
-    with open(VAULT_FILE, "w") as f:
-        for category, email, password in entries:
-            encrypt_and_store(category, email, password)
+    with open(ENTRIES_FILE, 'w') as f:
+        for cat, email, pw in entries:
+            f.write(f"{cat},{email},{pw}\n")
