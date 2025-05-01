@@ -19,7 +19,7 @@ lockout_until = None
 
 root = Tk()
 root.title("Password Manager - Locked")
-root.geometry("400x300")
+root.geometry("700x500")
 
 def clear_window():
     for widget in root.winfo_children():
