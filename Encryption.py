@@ -3,8 +3,10 @@
 # Purpose: This code is the handles the encryption and decryption for the application.
 
 # Imports
-
+import base64
 import hashlib
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
 import os
 import json
 
@@ -22,28 +24,9 @@ SECURITY_QUESTIONS = [
     "What is your favorite color?"
 ]
 
+# Retrieves all security questions
 def get_all_security_questions():
     return SECURITY_QUESTIONS
-
-# Generate a key based on the master password
-def _generate_key(password):
-    return hashlib.sha256(password.encode()).digest()
-
-# Master password handling
-def set_master_password(password):
-    hashed = hashlib.sha256(password.encode()).hexdigest()
-    with open(MASTER_FILE, 'w') as f:
-        f.write(hashed)
-
-def verify_master_password(password):
-    if not os.path.exists(MASTER_FILE):
-        return False
-    with open(MASTER_FILE, 'r') as f:
-        stored = f.read()
-    return hashlib.sha256(password.encode()).hexdigest() == stored
-
-def master_password_exists():
-    return os.path.exists(MASTER_FILE)
 
 # Security question handling
 def set_security_question(question, answer):
@@ -54,6 +37,7 @@ def set_security_question(question, answer):
     with open(SECURITY_FILE, 'w') as f:
         json.dump(data, f)
 
+# Retrieves security question that user answered to set master password
 def get_security_question():
     if not os.path.exists(SECURITY_FILE):
         return None
@@ -61,6 +45,7 @@ def get_security_question():
         data = json.load(f)
     return data.get("question")
 
+# Verifies answer to security question is correct to allow for password reset
 def verify_security_answer(answer):
     if not os.path.exists(SECURITY_FILE):
         return False
@@ -69,19 +54,96 @@ def verify_security_answer(answer):
     answer_hash = hashlib.sha256(answer.lower().strip().encode()).hexdigest()
     return data.get("answer_hash") == answer_hash
 
-# Entry encryption (simple write and read)
+# Hash a password (SHA-256)
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+# Save hashed master password
+def set_master_password(password):
+    with open(MASTER_FILE, "w") as f:
+        f.write(hash_password(password))
+
+
+# Check if config exists
+def master_password_exists():
+    return os.path.exists(MASTER_FILE)
+
+
+# Verify entered password
+def verify_master_password(input_password):
+    if not master_password_exists():
+        return False
+
+    with open(MASTER_FILE, "r") as f:
+        stored_hash = f.read().strip()
+
+    return hash_password(input_password) == stored_hash
+
+
+# Encrypt password entry and save to file
 def encrypt_and_store(category, email, password):
-    with open(ENTRIES_FILE, 'a') as f:
-        f.write(f"{category},{email},{password}\n")
+    key = get_random_bytes(16)
+    cipher = AES.new(key, AES.MODE_EAX)
+    ciphertext, tag = cipher.encrypt_and_digest(password.encode())
+    nonce = cipher.nonce
+    encoded_data = [
+        base64.b64encode(x).decode('utf-8')
+        for x in [ciphertext, key, nonce, tag]
+    ]
 
+    with open(ENTRIES_FILE, "a") as f:
+        f.write(f"{category},{email},{','.join(encoded_data)}\n")
+
+# Decrypt password based on category and email equaling correct entry in txt file
+def decrypt_password(category, email):
+    with open(ENTRIES_FILE, "r") as f:
+        for line in f:
+            entry = line.strip().split(',')
+            stored_category, stored_email = entry[0], entry[1]
+
+            if stored_category == category and stored_email == email:
+                encoded_data = entry[2:]  # Extract the encrypted data
+
+                ciphertext = base64.b64decode(encoded_data[0])
+                key = base64.b64decode(encoded_data[1])
+                nonce = base64.b64decode(encoded_data[2])
+                tag = base64.b64decode(encoded_data[3])
+
+                cipher = AES.new(key, AES.MODE_EAX, nonce=nonce)
+                decrypted_password = cipher.decrypt_and_verify(ciphertext, tag)
+
+                return decrypted_password.decode('utf-8')
+
+    # If no matching entry is found
+    return None
+
+# Load and return all entries
 def load_entries():
-    if not os.path.exists(ENTRIES_FILE):
-        return []
-    with open(ENTRIES_FILE, 'r') as f:
-        lines = f.readlines()
-    return [tuple(line.strip().split(',')) for line in lines]
+    entries = []
 
+    if not os.path.exists(ENTRIES_FILE):
+        return entries
+
+    with open(ENTRIES_FILE, "r") as f:
+
+        for line in f:
+            parts = line.strip().split(",")
+            if len(parts) != 6:
+                continue
+            category, email, *b64 = parts
+            ciphertext, key, nonce, tag = [base64.b64decode(x) for x in b64]
+            try:
+                entries.append((category, email, ciphertext))
+
+            except:
+                pass  # decryption failed, skip
+
+    return entries
+
+
+# Overwrite all entries in the file
 def overwrite_entries(entries):
-    with open(ENTRIES_FILE, 'w') as f:
-        for cat, email, pw in entries:
-            f.write(f"{cat},{email},{pw}\n")
+    with open(ENTRIES_FILE, "w") as f:
+        for category, email, password in entries:
+            encrypt_and_store(category, email, password)
