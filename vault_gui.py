@@ -5,6 +5,7 @@
 from tkinter import *
 from tkinter import messagebox, simpledialog, ttk
 import Encryption
+import random
 
 # Opening display screen object
 def open_vault():
@@ -27,7 +28,7 @@ def open_vault():
             Label(vault, text="No entries yet.", font=("Arial", 12)).pack(pady=10)
         else:
             for i, (cat, email, password) in enumerate(entries):
-                masked_password = "*" * len(password)
+                masked_password = "*" * (len(password) + random.randint(1,10))
                 frame = Frame(vault)
                 frame.pack(anchor=W, padx=20, pady=2)
                 Label(frame, text=f"[{cat}] {email} — {masked_password}", font=("Arial", 11)).grid(row=0, column=0, sticky=W)
@@ -55,7 +56,7 @@ def open_vault():
             Label(vault, text="No entries yet.", font=("Arial", 12)).pack(pady=10)
         else:
             for i, (cat, email, password) in enumerate(entries):
-                masked_password = "*" * len(password)
+                masked_password = "*" * (len(password) + random.randint(1,10))
                 frame = Frame(vault)
                 frame.pack(anchor=W, padx=20, pady=2)
                 if i == index:
